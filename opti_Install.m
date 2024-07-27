@@ -193,30 +193,48 @@ end
 
 function matlabVerCheck()
 
-fprintf('\n- Checking MATLAB version and operating system...\n');
-mver = ver('MATLAB');
-% Sometimes we get multiple products here (no idea why), ensure we have MATLAB
-if (length(mver) > 1)
-    for i = 1:length(mver)
-        if (strcmp(mver(i).Name, 'MATLAB'))
-            mver = mver(i);
-            break;
+fprintf('\n- Checking MATLAB/Octave version and operating system...\n');
+
+% Check if running in Octave
+isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;
+
+if isOctave
+    v = OCTAVE_VERSION;
+    vv = str2double(strsplit(v, '.'));
+    if(vv(1) < 6) % Octave 6.1.0 or higher is recommended
+        fprintf(2, 'OPTI is designed for Octave 6.1.0 or above.\nIt will install into lower versions, but you may experience reliability problems.\nPlease upgrade to Octave 6.1.0 or later.\n');
+    end
+    fprintf('Octave %s detected\n', v);
+else
+    mver = ver('MATLAB');
+    % Sometimes we get multiple products here (no idea why), ensure we have MATLAB
+    if (length(mver) > 1)
+        for i = 1:length(mver)
+            if (strcmp(mver(i).Name, 'MATLAB'))
+                mver = mver(i);
+                break;
+            end
         end
     end
+    
+    vv = regexp(mver.Version, '\.', 'split');
+    if(str2double(vv{1}) < 9)  % https://au.mathworks.com/support/requirements/previous-releases.html
+        fprintf(2, 'OPTI is designed for MATLAB 2020b or above.\nIt will install into lower versions, but you may experience reliability problems.\nPlease upgrade to R2020b or later.\n');
+    end
+    fprintf('MATLAB %s detected\n', mver.Release);
 end
 
-vv = regexp(mver.Version,'\.','split');
-if(str2double(vv{1}) < 9) % https://au.mathworks.com/support/requirements/previous-releases.html
-    fprintf(2,'OPTI is designed for MATLAB 2020b or above.\nIt will install into lower versions, but you may experience reliability problems.\nPlease upgrade to R2020b or later.\n');
-end
-
-switch(mexext)
+switch (mexext)
     case 'mexw32'
         error('OPTI Toolbox is compiled only for 64bit systems - sorry!');
     case 'mexw64'
-        fprintf('MATLAB %s 64bit (Windows x64) detected\n',mver.Release);
+        if isOctave
+            fprintf('Octave 64bit (Windows x64) %s detected\n', v);
+        else
+            fprintf('MATLAB %s 64bit (Windows x64) detected\n', mver.Release);
+        end
     otherwise
-        error('OPTI Toolbox is compiled only for Windows systems - sorry!');
+        error('Found %s system. OPTI Toolbox is compiled only for Windows systems - sorry!', mexext);
 end
 
 
